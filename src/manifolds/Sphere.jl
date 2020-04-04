@@ -336,18 +336,6 @@ function mean!(S::AbstractSphere, p, x::AbstractVector, w::AbstractVector; kwarg
     return mean!(S, p, x, w, GeodesicInterpolationWithinRadius(π / 2); kwargs...)
 end
 
-"""
-    normal_tvector_distribution(S::Sphere{n,ℝ}, p, σ)
-
-Generate a distribution in the tangent space at `p` by generating a
-normal distribution in ambient space with standard deviation `σ`
-projected to the tangent space at `p`.
-"""
-function normal_tvector_distribution(S::Sphere{n,ℝ}, p, σ) where {n}
-    d = Distributions.MvNormal(zero(p), σ)
-    return ProjectedFVectorDistribution(TangentBundleFibers(S), p, d, project!, p)
-end
-
 @doc raw"""
     project(M::AbstractSphere, p)
 
@@ -404,17 +392,6 @@ end
 
 show(io::IO, ::Sphere{n,𝔽}) where {n,𝔽} = print(io, "Sphere($(n); field = $(𝔽))")
 show(io::IO, ::ArraySphere{N,𝔽}) where {N,𝔽} = print(io, "ArraySphere($(join(N.parameters, ", ")); field = $(𝔽))")
-
-"""
-    uniform_distribution(M::AbstractSphere, p)
-
-Uniform distribution on given [`AbstractSphere`](@ref) `M`. Generated points will be of
-similar type as `p`.
-"""
-function uniform_distribution(M::AbstractSphere, p)
-    d = Distributions.MvNormal(zero(p), 1.0)
-    return ProjectedPointDistribution(M, d, project!, p)
-end
 
 @doc doc"""
     vector_transport_to(M::AbstractSphere, p, X, q, ::ParallelTransport)

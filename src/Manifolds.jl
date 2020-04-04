@@ -31,7 +31,6 @@ import Base:
     size,
     transpose,
     zero
-import Distributions: _rand!, support
 import LinearAlgebra: cross, det, Diagonal, dot, mul!, norm, I, UniformScaling
 import ManifoldsBase: OutOfInjectivityRadiusError
 import ManifoldsBase:
@@ -86,12 +85,10 @@ import ManifoldsBase:
     vector_transport_to!,
     zero_tangent_vector,
     zero_tangent_vector!
-import Random: rand
 import Statistics: mean, mean!, median, median!, std, var
 import StatsBase: kurtosis, mean_and_std, mean_and_var, moment, skewness
 
 using Base.Iterators: repeated
-using Distributions
 using Einsum: @einsum
 using FiniteDifferences
 using HybridArrays
@@ -158,8 +155,6 @@ include("statistics.jl")
 
 include("manifolds/VectorBundle.jl")
 
-include("distributions.jl")
-include("projected_distribution.jl")
 include("product_representations.jl")
 
 # It's included early to ensure visibility of `Identity`
@@ -209,6 +204,8 @@ include("groups/rotation_action.jl")
 
 include("groups/special_euclidean.jl")
 
+include("distributions/ManifoldDistributions.jl")
+
 function __init__()
     @require ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210" begin
         using .ForwardDiff
@@ -220,7 +217,7 @@ function __init__()
         include("ode.jl")
     end
 end
-#
+
 export CoTVector, Manifold, MPoint, TVector, Manifold
 export AbstractSphere
 export Euclidean,
@@ -254,10 +251,10 @@ export AbstractPowerManifold,
     PowerManifold
 export ProductManifold
 export GraphManifold, GraphManifoldType, VertexManifold, EdgeManifold
-export ProjectedPointDistribution, ProductRepr, TangentBundle, TangentBundleFibers
+export ProductRepr, TangentBundle, TangentBundleFibers
 export TangentSpace, TangentSpaceAtPoint, VectorSpaceAtPoint, VectorSpaceType, VectorBundle
 export VectorBundleFibers
-export AbstractVectorTransportMethod, ParallelTransport, ProjectedPointDistribution
+export AbstractVectorTransportMethod, ParallelTransport
 export AbstractEmbeddedManifold
 export Metric,
     RiemannianMetric,
@@ -354,13 +351,11 @@ export ×,
     minkowski_metric,
     moment,
     norm,
-    normal_tvector_distribution,
     number_eltype,
     one,
     power_dimensions,
     project,
     project!,
-    projected_distribution,
     real_dimension,
     ricci_curvature,
     ricci_tensor,
@@ -377,7 +372,6 @@ export ×,
     submanifold,
     submanifold_component,
     submanifold_components,
-    uniform_distribution,
     var,
     vector_space_dimension,
     vector_transport_along,

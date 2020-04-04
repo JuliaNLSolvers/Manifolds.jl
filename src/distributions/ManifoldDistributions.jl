@@ -1,3 +1,33 @@
+module ManifoldDistributions
+
+using Distributions
+using LinearAlgebra
+using ManifoldsBase
+using ManifoldsBase: AbstractDecoratorManifold, Manifold, @decorator_transparent_signature
+using ..Manifolds
+using ..Manifolds:
+    TangentBundleFibers,
+    VectorBundleFibers,
+    VectorSpaceType,
+    ProductRepr,
+    ℝ,
+    AbstractSphere,
+    AbstractPowerManifold,
+    Euclidean,
+    MetricManifold,
+    ProductManifold,
+    Rotations,
+    Sphere,
+    allocate_result,
+    get_iterator,
+    project!,
+    representation_size,
+    submanifold_components,
+    zero_vector,
+    _read,
+    _write
+using Random
+
 """
     FVectorvariate
 
@@ -66,8 +96,15 @@ end
 @decorator_transparent_signature normal_tvector_distribution(
     M::AbstractDecoratorManifold,
     p,
-    σ
+    σ,
 )
 
-@decorator_transparent_signature projected_distribution(M::AbstractDecoratorManifold, d, p)
-@decorator_transparent_signature projected_distribution(M::AbstractDecoratorManifold, d)
+@decorator_transparent_signature uniform_distribution(M::AbstractDecoratorManifold, p)
+
+include("projected_distribution.jl")
+include("manifold_distribution.jl")
+
+export normal_tvector_distribution, projected_distribution, uniform_distribution
+export FVectorDistribution, MPointDistribution, ProjectedFVector, ProjectedPoint
+
+end # module
