@@ -101,7 +101,10 @@ include("SizedAbstractArray.jl")
 
 include("statistics.jl")
 
+include("vector_space.jl")
+
 include("manifolds/VectorBundle.jl")
+
 
 include("distributions.jl")
 include("projected_distribution.jl")
@@ -233,7 +236,12 @@ export SVDMPoint, UMVTVector, AbstractNumbers, ℝ, ℂ, ℍ
 export AbstractDecoratorManifold
 export ValidationManifold, ValidationMPoint, ValidationTVector, ValidationCoTVector
 export CotangentBundle,
-    CotangentSpaceAtPoint, CotangentBundleFibers, CotangentSpace, FVector
+    CotangentSpaceAtPoint,
+    CotangentBundleFibers,
+    CotangentSpace,
+    FVector,
+    TFVector,
+    CoTFVector
 export AbstractPowerManifold,
     AbstractPowerRepresentation,
     ArrayPowerRepresentation,
