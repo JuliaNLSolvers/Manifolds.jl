@@ -190,6 +190,9 @@ include("groups/semidirect_product_group.jl")
 include("groups/general_linear.jl")
 include("groups/special_linear.jl")
 include("groups/translation_group.jl")
+include("groups/unitary.jl")
+include("groups/orthogonal.jl")
+include("groups/special_unitary.jl")
 include("groups/special_orthogonal.jl")
 include("groups/circle_group.jl")
 
@@ -494,6 +497,7 @@ export AbstractGroupAction,
     LeftAction,
     LeftInvariantMetric,
     MultiplicationOperation,
+    Orthogonal,
     ProductGroup,
     ProductOperation,
     RightAction,
@@ -502,9 +506,11 @@ export AbstractGroupAction,
     SemidirectProductGroup,
     SpecialEuclidean,
     SpecialLinear,
+    SpecialUnitary,
     SpecialOrthogonal,
     TranslationGroup,
-    TranslationAction
+    TranslationAction,
+    Unitary
 export affine_matrix,
     apply,
     apply!,

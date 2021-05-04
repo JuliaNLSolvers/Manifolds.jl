@@ -1,12 +1,12 @@
 @doc raw"""
-    SpecialOrthogonal{n} <: GroupManifold{ℝ,Rotations{n},MultiplicationOperation}
+    SpecialOrthogonal{n} = SpecialUnitary{n,ℝ}
 
 Special orthogonal group $\mathrm{SO}(n)$ represented by rotation matrices.
 
 # Constructor
     SpecialOrthogonal(n)
 """
-const SpecialOrthogonal{n} = GroupManifold{ℝ,Rotations{n},MultiplicationOperation}
+const SpecialOrthogonal{n} = SpecialUnitary{n,ℝ}
 
 invariant_metric_dispatch(::SpecialOrthogonal, ::ActionDirection) = Val(true)
 
@@ -17,50 +17,140 @@ function default_metric_dispatch(
 end
 default_metric_dispatch(::SpecialOrthogonal, ::EuclideanMetric) = Val(true)
 
-SpecialOrthogonal(n) = SpecialOrthogonal{n}(Rotations(n), MultiplicationOperation())
+for f in (:inverse_retract, :retract)
+    @eval begin
+        function decorator_transparent_dispatch(
+            ::typeof($(f)),
+            ::SpecialOrthogonal,
+            args...,
+        )
+            return Val(:parent)
+        end
+    end
+end
+
+SpecialOrthogonal(n) = SpecialOrthogonal{n}()
 
 Base.show(io::IO, ::SpecialOrthogonal{n}) where {n} = print(io, "SpecialOrthogonal($(n))")
 
-Base.inv(::SpecialOrthogonal, p) = transpose(p)
-
-inverse_translate(G::SpecialOrthogonal, p, q, ::LeftAction) = inv(G, p) * q
-inverse_translate(G::SpecialOrthogonal, p, q, ::RightAction) = q * inv(G, p)
-
-translate_diff(::SpecialOrthogonal, p, q, X, ::LeftAction) = X
-translate_diff(G::SpecialOrthogonal, p, q, X, ::RightAction) = inv(G, p) * X * p
-
-function translate_diff!(G::SpecialOrthogonal, Y, p, q, X, conv::ActionDirection)
-    return copyto!(Y, translate_diff(G, p, q, X, conv))
+for f in (:get_coordinates!, get_coordinates, :get_vector!, :get_vector)
+    @eval begin
+        function decorator_transparent_dispatch(
+            ::typeof($(f)),
+            ::SpecialOrthogonal,
+            args...,
+        )
+            return Val(:transparent)
+        end
+    end
 end
 
-function inverse_translate_diff(G::SpecialOrthogonal, p, q, X, conv::ActionDirection)
-    return translate_diff(G, inv(G, p), q, X, conv)
+function injectivity_radius(::SpecialOrthogonal, p, ::PolarRetraction)
+    T = eltype(p)
+    return π / sqrt(T(2))
+end
+injectivity_radius(::SpecialOrthogonal, ::PolarRetraction) = π / sqrt(2)
+
+@doc raw"""
+    inverse_retract(G::SpecialOrthogonal, p, q, ::PolarInverseRetraction)
+
+Compute a vector from the tangent space $T_p\mathrm{SO}(n)$ of the point `p` on the
+[`SpecialOrthogonal`](@ref) manifold `G` with which the point `q` can be reached by the
+[`PolarRetraction`](@ref) from the point `p` after time 1.
+
+The formula reads
+````math
+\operatorname{retr}^{-1}_p(q)
+= -\frac{1}{2}(p^{\mathrm{T}}qs - (p^{\mathrm{T}}qs)^{\mathrm{T}})
+````
+
+where $s$ is the solution to the Sylvester equation
+
+$p^{\mathrm{T}}qs + s(p^{\mathrm{T}}q)^{\mathrm{T}} + 2I_n = 0.$
+"""
+inverse_retract(::SpecialOrthogonal, ::Any, ::Any, ::PolarInverseRetraction)
+
+@doc raw"""
+    inverse_retract(G::SpecialOrthogonal, p, q, ::QRInverseRetraction)
+
+Compute a vector from the tangent space $T_p\mathrm{SO}(n)$ of the point `p` on the
+[`SpecialOrthogonal`](@ref) manifold `G` with which the point `q` can be reached by the
+[`QRRetraction`](@ref) from the point `q` after time 1.
+"""
+inverse_retract(::SpecialOrthogonal, ::Any, ::Any, ::QRInverseRetraction)
+
+function inverse_retract!(G::SpecialOrthogonal, X, p, q, ::PolarInverseRetraction)
+    A = inverse_translate(G, q, p, LeftAction())
+    Amat = A isa StaticMatrix ? A : convert(Matrix, A)
+    H = copyto!(allocate(Amat), -2I)
+    try
+        B = lyap(Amat, H)
+        mul!(X, A, B)
+    catch e
+        if isa(e, LinearAlgebra.LAPACKException)
+            throw(OutOfInjectivityRadiusError())
+        else
+            rethrow()
+        end
+    end
+    e = Identity(G, A)
+    project!(G, X, e, X)
+    return translate_diff!(G, X, p, e, X, LeftAction())
+end
+function inverse_retract!(G::SpecialOrthogonal{n}, X, p, q, ::QRInverseRetraction) where {n}
+    A = inverse_translate(G, q, p, LeftAction())
+    R = zero(X)
+    for i in 1:n
+        b = zeros(i)
+        b[end] = 1
+        b[1:(end - 1)] = -transpose(R[1:(i - 1), 1:(i - 1)]) * A[i, 1:(i - 1)]
+        R[1:i, i] = A[1:i, 1:i] \ b
+    end
+    mul!(X, A, R)
+    e = Identity(G, A)
+    project!(G, X, e, X)
+    return translate_diff!(G, X, p, e, X, LeftAction())
 end
 
-function inverse_translate_diff!(G::SpecialOrthogonal, Y, p, q, X, conv::ActionDirection)
-    return copyto!(Y, inverse_translate_diff(G, p, q, X, conv))
-end
+project!(::SpecialOrthogonal{n}, Y, p, X) where {n} = project!(Orthogonal(n), Y, p, X)
 
-group_exp!(G::SpecialOrthogonal, q, X) = exp!(G, q, make_identity(G, q).p, X)
+@doc raw"""
+    retract(G::SpecialOrthogonal, p, X, ::PolarRetraction)
 
-group_log!(G::SpecialOrthogonal, X, q) = log!(G, X, make_identity(G, q).p, q)
-function group_log!(G::SpecialOrthogonal, X::AbstractMatrix, q::AbstractMatrix)
-    return log!(G, X, make_identity(G, q).p, q)
-end
+Compute the SVD-based retraction on the [`SpecialOrthogonal`](@ref) `G` from `p` in
+direction `X` and is a second-order approximation of the exponential map. Let
 
-function allocate_result(
-    ::GT,
-    ::typeof(exp),
-    ::Identity{GT},
-    X,
-) where {n,GT<:SpecialOrthogonal{n}}
-    return allocate(X)
+````math
+USV = p + pX
+````
+
+be the singular value decomposition, then the formula reads
+
+````math
+\operatorname{retr}_p X = UV^\mathrm{T}.
+````
+"""
+retract(::SpecialOrthogonal, ::Any, ::Any, ::PolarRetraction)
+
+@doc raw"""
+    retract(G::SpecialOrthogonal, p, X, ::QRRetraction)
+
+Compute the QR-based retraction on the [`SpecialOrthogonal`](@ref) group `G` from `p` in
+direction `X`, which is a first-order approximation of the exponential map.
+
+This is also the default retraction on the [`SpecialOrthogonal`](@ref) group.
+"""
+retract(::SpecialOrthogonal, ::Any, ::Any, ::QRRetraction)
+
+function retract!(::SpecialOrthogonal{n}, q, p, X, ::QRRetraction) where {n}
+    A = p + p * X
+    Q, R = qr(A)
+    d = @view R[diagind(n, n)]
+    T = eltype(q)
+    q .= Q .* sign.(d' .+ inv(T(2)))
+    return q
 end
-function allocate_result(
-    ::GT,
-    ::typeof(log),
-    ::Identity{GT},
-    q,
-) where {n,GT<:SpecialOrthogonal{n}}
-    return allocate(q)
+function retract!(G::SpecialOrthogonal, q, p, X, ::PolarRetraction)
+    A = p + p * X
+    return project!(G, q, A)
 end

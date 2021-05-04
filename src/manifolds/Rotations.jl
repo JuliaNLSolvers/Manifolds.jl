@@ -76,12 +76,12 @@ function check_manifold_point(M::Rotations{N}, p; kwargs...) where {N}
         )
     end
     if !isapprox(det(p), 1; kwargs...)
-        return DomainError(det(p), "The determinant of $p has to be +1 but it is $(det(p))")
+        return DomainError(det(p), "The determinant of $p must be +1 but it is $(det(p))")
     end
     if !isapprox(transpose(p) * p, one(p); kwargs...)
         return DomainError(
             norm(transpose(p) * p - one(p)),
-            "$p must be orthogonal but it's not at kwargs $kwargs",
+            "$p must be orthogonal but is not with kwargs $kwargs",
         )
     end
     return nothing
@@ -107,7 +107,7 @@ function check_tangent_vector(
         perr = check_manifold_point(M, p)
         perr === nothing || return perr
     end
-    return check_manifold_point(SkewSymmetricMatrices(N), X)
+    return check_tangent_vector(Orthogonal(N), p, X; check_base_point=false, kwargs...)
 end
 
 @doc raw"""
@@ -131,10 +131,9 @@ By convention, the returned values are sorted in increasing order. See
 [`angles_4d_skew_sym_matrix`](@ref).
 """
 function cos_angles_4d_rotation_matrix(R)
-    trR = tr(R)
-    a = trR / 4
-    b = sqrt(clamp(tr((R .- transpose(R))^2) / 16 - a^2 + 1, 0, Inf))
-    return (a + b, a - b)
+    a = tr(R)
+    b = sqrt(clamp(2 * dot(transpose(R), R) - a^2 + 8, 0, Inf))
+    return ((a + b) / 4, (a - b) / 4)
 end
 
 @doc raw"""
